@@ -1,0 +1,32 @@
+﻿<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Bulut Kosu - Oyun</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div id="gameContainer">
+      <canvas id="gameCanvas" width="1200" height="600"></canvas>
+      <div id="hud">
+        <div id="hudLeft">
+          <div>Mesafe: <span id="distance">0</span>m</div>
+          <div>Can: <span id="health">3</span></div>
+        </div>
+        <div id="hudCenter">
+          <button id="startBtn">Baslat</button>
+          <button id="resetBtn">Sifirla</button>
+        </div>
+        <div id="hudRight">
+          <div id="gameState" class="hidden">Oyun Basladi!</div>
+          <div id="winText" class="hidden">Kazandin!</div>
+        </div>
+      </div>
+      <p class="instructions">A/D veya sol-sag tuslari ile hareket edin. SPACE ile ziplayin. Hedefe ulasin.</p>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

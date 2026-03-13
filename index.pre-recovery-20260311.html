@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dino Survival - Platform Oyunu</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main id="gameShell">
+      <button id="muteBtn" type="button" aria-label="Sesi aç kapa">Ses: Acik</button>
+
+      <header id="hud">
+        <div class="hud-card"><span class="hud-icon score"></span><span class="hud-label">Skor</span><span id="score">0</span></div>
+        <div class="hud-card"><span class="hud-icon best"></span><span class="hud-label">Rekor</span><span id="best">0</span></div>
+        <div class="hud-card"><span class="hud-icon time"></span><span class="hud-label">Zorluk</span><span id="difficultyInfo">Kolay</span></div>
+        <div class="hud-card"><span class="hud-icon time"></span><span class="hud-label">Combo</span><span id="comboInfo">x1</span></div>
+        <div class="hud-card"><span class="hud-icon time"></span><span class="hud-label">Bolum</span><span id="levelInfo">1</span></div>
+        <div class="hud-card"><span class="hud-icon coin"></span><span class="hud-label">Coin</span><span id="coins">0</span></div>
+        <div id="chainCard" class="hud-card"><span class="hud-icon chain"></span><span class="hud-label">Zincir</span><span id="chainInfo">x0</span></div>
+        <div class="hud-card"><span class="hud-icon life"></span><span class="hud-label">Can</span><span id="lives">3</span></div>
+        <div class="hud-card"><span class="hud-icon time"></span><span class="hud-label">Sure</span><span id="time">100</span>s</div>
+      </header>
+
+      <canvas id="gameCanvas" width="960" height="540" aria-label="Platform oyunu"></canvas>
+
+      <section id="menuOverlay" class="overlay">
+        <div class="overlay-card menu-card">
+          <div class="menu-emblem" aria-hidden="true"><span></span><span></span><span></span></div>
+          <p class="menu-kicker">Utopik Konsol Sunar</p>
+          <h1>Dino Adventure</h1>
+          <p class="menu-subtitle">1K ozel mini kutlama surumu. Kisa, hizli ve keyifli bir platform kosusu.</p>
+          <div class="menu-badge-row">
+            <span class="menu-badge">1K Ozel</span>
+            <span class="menu-chip">YouTube Hediyesi</span>
+          </div>
+          <div class="menu-actions">
+            <button id="menuStartBtn" type="button">Basla</button>
+            <button id="menuHowBtn" type="button">Nasil Oynanir</button>
+          </div>
+          <div class="menu-select">
+            <label for="difficultySelect">Zorluk Sec</label>
+            <select id="difficultySelect">
+              <option value="easy">Kolay</option>
+              <option value="medium">Orta</option>
+              <option value="hard">Zor</option>
+            </select>
+          </div>
+          <p id="howToText" class="hidden">
+            Hareket: A/D veya Oklar, Aksiyon: Space, Zipla: W veya Ok Yukari, mobilde ekrandaki butonlar.
+          </p>
+          <p class="menu-thanks">Destek olan herkese tesekkurler. Bu ekran kutlamanin giris karti gibi calissin istedik.</p>
+          <section id="achievementPanel" class="achievement-panel">
+            <h3>Basarimlar</h3>
+            <ul id="achievementList"></ul>
+            <p id="achievementHint" class="achievement-hint">Bir basarima tikla, nasil alinacagini gosterelim.</p>
+          </section>
+          <small>Ütopik Konsol - Dino Adventure (v1.1)</small>
+        </div>
+      </section>
+
+      <section id="finalOverlay" class="overlay hidden">
+        <div class="overlay-card final-card">
+          <div class="final-burst" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p class="final-kicker">Macera Tamamlandi</p>
+          <h2 id="finalTitle">Tebrikler</h2>
+          <p id="finalSummary" class="final-summary">Boss dustu, yolculuk bitti ve dino eve dondu.</p>
+          <div class="final-badge-row">
+            <span id="finalBadge" class="final-badge">1K Ozel Kutlama</span>
+            <span id="finalDifficulty" class="final-chip">Kolay Mod</span>
+          </div>
+          <div class="final-stats">
+            <div class="final-stat">
+              <span class="final-stat-label">Toplam Puan</span>
+              <strong id="finalScore">0</strong>
+            </div>
+            <div class="final-stat">
+              <span class="final-stat-label">Rekor</span>
+              <strong id="finalBest">0</strong>
+            </div>
+            <div class="final-stat">
+              <span class="final-stat-label">Toplanan Coin</span>
+              <strong id="finalCoins">0</strong>
+            </div>
+            <div class="final-stat">
+              <span class="final-stat-label">En Iyi Combo</span>
+              <strong id="finalCombo">x1</strong>
+            </div>
+          </div>
+          <div class="final-story">
+            <span class="final-story-label">Utopik Konsol 1K Hediyesi</span>
+            <p id="finalStoryText">Bu final ekranini kutlamayi bir hatira gibi hissettirsin diye hazirladik.</p>
+          </div>
+          <div class="menu-actions final-actions">
+            <button id="finalReplayBtn" type="button">Tekrar Oyna</button>
+            <button id="finalMenuBtn" type="button">Menuye Don</button>
+          </div>
+          <small>Utopik Konsol - Dino Adventure Finali</small>
+        </div>
+      </section>
+
+      <section id="controls">
+        <button id="startBtn" type="button">Baslat</button>
+        <button id="resetBtn" type="button">Sifirla</button>
+        <button id="pauseBtn" type="button">Duraklat</button>
+      </section>
+
+      <p id="status">Hareket: A/D veya Ok tuslari, ates: Space, zipla: W/Ok Yukari</p>
+
+      <section id="touchPad" aria-label="Mobil kontroller">
+        <button id="leftBtn" class="touch-btn left" type="button" aria-label="Sola git"></button>
+        <button id="fireBtn" class="touch-btn fire" type="button" aria-label="Ates et"></button>
+        <button id="jumpBtn" class="touch-btn jump" type="button" aria-label="Zipla"></button>
+        <button id="rightBtn" class="touch-btn right" type="button" aria-label="Saga git"></button>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

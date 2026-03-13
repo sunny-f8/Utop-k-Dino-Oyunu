@@ -1,0 +1,6 @@
+﻿node_modules/
+output/
+server.out.log
+server.err.log
+*.pre-v14-import-20260311.*
+*.pre-recovery-20260311.*
