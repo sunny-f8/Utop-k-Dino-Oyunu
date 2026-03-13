@@ -1,7 +1,7 @@
 ﻿(() => {
   const POLISH = true;
   const ICON_DINO = true;
-  const DINO_RUN_SHEET_FILES = ['player_run_0.png', 'player_run_1.png', 'player_run_2.png'];
+  const DINO_RUN_SHEET_FILES = ['dino_walk.png.png', 'dino_walk.png'];
   const DINO_SHEET_CONFIG = { frameW: 0, frameH: 0, frames: 0 };
   const DINO_DEFAULT_FRAMES = 3;
   const FIXED_DINO_SCALE = 1.3;
@@ -68,15 +68,8 @@
   const levelBtns = Array.from(document.querySelectorAll('.levelBtn'));
 
   const finalOverlayEl = document.getElementById('finalOverlay');
-  const finalTitleEl = document.getElementById('finalTitle');
-  const finalSummaryEl = document.getElementById('finalSummary');
-  const finalBadgeEl = document.getElementById('finalBadge');
-  const finalDifficultyEl = document.getElementById('finalDifficulty');
   const finalScoreEl = document.getElementById('finalScore');
   const finalBestEl = document.getElementById('finalBest');
-  const finalCoinsEl = document.getElementById('finalCoins');
-  const finalComboEl = document.getElementById('finalCombo');
-  const finalStoryTextEl = document.getElementById('finalStoryText');
   const finalReplayBtn = document.getElementById('finalReplayBtn');
   const finalMenuBtn = document.getElementById('finalMenuBtn');
   const muteBtn = document.getElementById('muteBtn');
@@ -98,10 +91,6 @@
   const initialVisualMode = localStorage.getItem('dinoVisualMode') === 'pixel' ? 'pixel' : 'smooth';
   const initialDinoScale = FIXED_DINO_SCALE;
   const ACHIEVEMENT_STORE_KEY = 'dinoAchievementsV1';
-  const startupParams = new URLSearchParams(window.location.search);
-  const startupLevel = clamp(Number(startupParams.get('level') || '1'), 1, 3);
-  const startupWin = startupParams.get('win') === '1';
-  const startupPlay = startupParams.get('play') === '1';
   const initialDifficulty = ['easy', 'medium', 'hard'].includes(localStorage.getItem('dinoDifficulty'))
     ? localStorage.getItem('dinoDifficulty')
     : 'easy';
@@ -184,7 +173,6 @@
     dropSpawnTimer: 1.2,
     shakeTimer: 0,
     shakeAmp: 0,
-    bossDefeatFlashTimer: 0,
     stageBannerTimer: 1.8,
     stageBannerText: 'BOLUM 1',
     stageCompleteText: 'BOLUM 1 TAMAMLANDI',
@@ -209,8 +197,7 @@
     enemyKills: 0,
     levelDamaged: false,
     achievementToasts: [],
-    achievements: storedAchievements,
-    manualTimeMode: false
+    achievements: storedAchievements
   };
 
   const input = {
@@ -237,7 +224,7 @@
   const blockDebris = [];
   const playerShots = [];
   const bossShots = [];
-  const boss = { active: false, x: 0, y: 0, w: 86, h: 72, hp: 0, maxHp: 0, dir: -1, shootTimer: 0, bobPhase: 0, telegraphTimer: 0, snapTimer: 0 };
+  const boss = { active: false, x: 0, y: 0, w: 86, h: 72, hp: 0, maxHp: 0, dir: -1, shootTimer: 0, bobPhase: 0 };
   const SCORE_VALUES = {
     coin: 10,
     meat: 20,
@@ -638,8 +625,6 @@
     boss.dir = -1;
     boss.shootTimer = 1.25 / cfg.bossShootRate;
     boss.bobPhase = 0;
-    boss.telegraphTimer = 0;
-    boss.snapTimer = 0;
     state.bossMoveMul = cfg.bossMoveMul;
     state.bossShootRate = cfg.bossShootRate;
     home.active = false;
@@ -836,23 +821,14 @@
     const inMenu = state.mode === 'menu';
     const inFinal = state.mode === 'won';
     const hideGameUi = inMenu || inFinal;
-    document.body.classList.toggle('menu-open', inMenu);
-    document.body.classList.toggle('final-open', inFinal);
     hudEl.classList.toggle('hidden', hideGameUi);
     controlsEl.classList.toggle('hidden', hideGameUi);
     statusEl.classList.toggle('hidden', hideGameUi);
     menuOverlayEl.classList.toggle('hidden', !inMenu);
     finalOverlayEl.classList.toggle('hidden', state.mode !== 'won');
     if (state.mode === 'won') {
-      if (finalTitleEl) finalTitleEl.textContent = state.level === 3 ? 'Tebrikler' : 'Bolum Tamamlandi';
-      if (finalSummaryEl) finalSummaryEl.textContent = state.level === 3 ? 'Boss dustu, yolculuk bitti ve dino eve dondu.' : 'Macera tamamlandi ve yeni rekor ihtimali dogdu.';
-      if (finalBadgeEl) finalBadgeEl.textContent = '1K Ozel Kutlama';
-      if (finalDifficultyEl) finalDifficultyEl.textContent = `${getDifficultyConfig().label} Mod`;
       finalScoreEl.textContent = String(state.score);
       finalBestEl.textContent = String(state.bestScore);
-      if (finalCoinsEl) finalCoinsEl.textContent = String(state.coins);
-      if (finalComboEl) finalComboEl.textContent = `x${state.comboMult}`;
-      if (finalStoryTextEl) finalStoryTextEl.textContent = 'Bu final ekranini kutlamayi bir hatira gibi hissettirsin diye hazirladik.';
     }
     const shouldHideTouch = hideGameUi || (!isTouchDevice && window.innerWidth > 920);
     if (shouldHideTouch) {
@@ -1110,141 +1086,87 @@
     ctx.restore();
   }
 
-  function drawIconDino(x, y, w, h, flip, scaleX, scaleY, mood = 'normal', pose = 'idle', powered = false) {
+  function drawIconDino(x, y, w, h, flip, scaleX, scaleY, mood = 'normal') {
     const cx = x + w * 0.5;
     const cy = y + h * 0.5;
     const t = state.animTime;
-    const running = pose === 'run' || pose === 'skid';
-    const airborne = pose === 'jump' || pose === 'fall';
-    const hurt = mood === 'hurt';
-    const victory = mood === 'win';
-    const stride = running ? Math.sin(t * 15) : 0;
-    const bob = airborne ? -h * 0.018 : running ? Math.abs(Math.sin(t * 15)) * (h * 0.03) : Math.sin(t * 3.4) * (h * 0.01);
-    const tailLift = pose === 'jump' ? -h * 0.06 : pose === 'fall' ? h * 0.02 : pose === 'skid' ? -h * 0.03 : 0;
-    const headLift = pose === 'jump' ? -h * 0.05 : pose === 'fall' ? -h * 0.015 : victory ? -h * 0.03 : 0;
-    const bodyTilt = pose === 'jump' ? -0.12 : pose === 'fall' ? 0.08 : pose === 'skid' ? -0.16 : running ? stride * 0.02 : 0;
-    const jawOpen = hurt ? 0.06 : victory ? 0.05 : pose === 'jump' ? 0.04 : 0.02;
-    const legFront = running ? stride * (h * 0.06) : pose === 'jump' ? -h * 0.03 : pose === 'fall' ? h * 0.04 : 0;
-    const legBack = running ? -stride * (h * 0.06) : pose === 'jump' ? h * 0.02 : pose === 'fall' ? -h * 0.02 : 0;
+    const moving = Math.abs(player.vx) > 20;
+    const legSwing = moving ? Math.sin(t * 16) * (h * 0.05) : 0;
+    const bob = moving ? Math.abs(Math.sin(t * 16)) * (h * 0.02) : 0;
 
-    const bodyMain = hurt ? '#d67878' : victory ? '#79df90' : powered ? '#72d6a7' : '#55c976';
-    const bodyShade = hurt ? '#a94e52' : victory ? '#46a760' : powered ? '#2d9e78' : '#2f9157';
-    const bodyDark = hurt ? '#6f2e34' : '#1f5c39';
-    const belly = hurt ? '#f5c3c3' : powered ? '#d8fff0' : '#d6f6df';
-    const spike = hurt ? '#8d4346' : powered ? '#1d7860' : '#2c7c49';
-    const eye = hurt ? '#351111' : '#102d1d';
-    const glow = powered ? 'rgba(173, 255, 228, 0.28)' : 'rgba(255,255,255,0)';
+    const bodyMain = mood === 'hurt' ? '#d77474' : mood === 'win' ? '#6fd98a' : '#52c26f';
+    const bodyShadow = mood === 'hurt' ? '#ba5c5c' : '#2f9a54';
+    const belly = mood === 'hurt' ? '#f3b8b8' : '#c9f4d3';
+    const spike = mood === 'hurt' ? '#9a3f3f' : '#2a7d47';
+    const eye = mood === 'hurt' ? '#3c1111' : '#0f2b1e';
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale((flip ? -1 : 1) * scaleX, scaleY);
-    ctx.rotate(bodyTilt);
     ctx.translate(-w * 0.5, -h * 0.5);
 
-    if (powered) {
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.ellipse(w * 0.5, h * 0.56 + bob, w * 0.34, h * 0.3, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = bodyDark;
+    // Tail
+    ctx.fillStyle = bodyShadow;
     ctx.beginPath();
-    ctx.moveTo(w * 0.24, h * 0.67 + bob);
-    ctx.lineTo(w * 0.04, h * 0.62 + bob + tailLift * 0.4);
-    ctx.lineTo(w * 0.01, h * 0.75 + bob + tailLift);
-    ctx.lineTo(w * 0.2, h * 0.79 + bob + tailLift * 0.6);
-    ctx.lineTo(w * 0.31, h * 0.73 + bob);
+    ctx.moveTo(w * 0.22, h * 0.62 + bob);
+    ctx.lineTo(w * 0.02, h * 0.72 + bob);
+    ctx.lineTo(w * 0.22, h * 0.78 + bob);
     ctx.closePath();
     ctx.fill();
 
+    // Body
     ctx.fillStyle = bodyMain;
     ctx.beginPath();
-    ctx.moveTo(w * 0.24, h * 0.63 + bob);
-    ctx.quadraticCurveTo(w * 0.31, h * 0.4 + bob, w * 0.49, h * 0.42 + bob);
-    ctx.quadraticCurveTo(w * 0.69, h * 0.44 + bob, w * 0.72, h * 0.62 + bob);
-    ctx.quadraticCurveTo(w * 0.68, h * 0.79 + bob, w * 0.47, h * 0.81 + bob);
-    ctx.quadraticCurveTo(w * 0.29, h * 0.8 + bob, w * 0.24, h * 0.63 + bob);
-    ctx.closePath();
+    ctx.ellipse(w * 0.47, h * 0.61 + bob, w * 0.24, h * 0.23, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Neck + head
+    ctx.fillRect(w * 0.53, h * 0.36 + bob, w * 0.2, h * 0.18);
+    ctx.beginPath();
+    ctx.ellipse(w * 0.74, h * 0.4 + bob, w * 0.16, h * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Snout
+    ctx.fillStyle = bodyShadow;
+    ctx.fillRect(w * 0.8, h * 0.42 + bob, w * 0.14, h * 0.08);
+
+    // Belly
     ctx.fillStyle = belly;
     ctx.beginPath();
-    ctx.moveTo(w * 0.38, h * 0.57 + bob);
-    ctx.quadraticCurveTo(w * 0.53, h * 0.57 + bob, w * 0.58, h * 0.74 + bob);
-    ctx.quadraticCurveTo(w * 0.48, h * 0.79 + bob, w * 0.37, h * 0.74 + bob);
-    ctx.closePath();
+    ctx.ellipse(w * 0.46, h * 0.64 + bob, w * 0.11, h * 0.12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = bodyShade;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.51, h * 0.5 + bob);
-    ctx.quadraticCurveTo(w * 0.55, h * 0.3 + bob + headLift, w * 0.69, h * 0.27 + bob + headLift);
-    ctx.quadraticCurveTo(w * 0.77, h * 0.3 + bob + headLift, w * 0.79, h * 0.38 + bob + headLift);
-    ctx.lineTo(w * 0.72, h * 0.49 + bob);
-    ctx.lineTo(w * 0.55, h * 0.56 + bob);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = bodyMain;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.62, h * 0.29 + bob + headLift);
-    ctx.quadraticCurveTo(w * 0.8, h * 0.18 + bob + headLift, w * 0.9, h * 0.31 + bob + headLift);
-    ctx.quadraticCurveTo(w * 0.92, h * 0.39 + bob + headLift, w * 0.84, h * 0.45 + bob + headLift);
-    ctx.lineTo(w * 0.67, h * 0.44 + bob + headLift);
-    ctx.quadraticCurveTo(w * 0.6, h * 0.38 + bob + headLift, w * 0.62, h * 0.29 + bob + headLift);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = bodyShade;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.83, h * 0.37 + bob + headLift);
-    ctx.lineTo(w * 0.95, h * 0.39 + bob + headLift);
-    ctx.lineTo(w * 0.94, h * 0.47 + bob + headLift + h * jawOpen);
-    ctx.lineTo(w * 0.82, h * 0.45 + bob + headLift + h * jawOpen * 0.8);
-    ctx.closePath();
-    ctx.fill();
-
+    // Back spikes
     ctx.fillStyle = spike;
-    for (let i = 0; i < 5; i += 1) {
-      const sx = w * (0.29 + i * 0.085);
-      const sy = h * (0.37 - i * 0.012) + bob;
+    for (let i = 0; i < 4; i += 1) {
+      const sx = w * (0.32 + i * 0.09);
+      const sy = h * (0.38 - i * 0.01) + bob;
       ctx.beginPath();
       ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + w * 0.034, sy - h * (0.08 + i * 0.005));
-      ctx.lineTo(sx + w * 0.072, sy + h * 0.01);
+      ctx.lineTo(sx + w * 0.035, sy - h * 0.07);
+      ctx.lineTo(sx + w * 0.07, sy);
       ctx.closePath();
       ctx.fill();
     }
 
-    ctx.fillStyle = bodyShade;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.55, h * 0.6 + bob);
-    ctx.lineTo(w * 0.63, h * 0.64 + bob);
-    ctx.lineTo(w * 0.61, h * 0.73 + bob + legFront * 0.12);
-    ctx.lineTo(w * 0.54, h * 0.71 + bob + legFront * 0.08);
-    ctx.closePath();
-    ctx.fill();
+    // Arm
+    ctx.fillStyle = bodyShadow;
+    ctx.fillRect(w * 0.56, h * 0.61 + bob, w * 0.06, h * 0.08);
 
-    ctx.fillStyle = bodyDark;
-    ctx.fillRect(w * 0.36, h * 0.72 + bob + legFront, w * 0.085, h * 0.2 - Math.abs(legFront) * 0.18);
-    ctx.fillRect(w * 0.49, h * 0.72 + bob + legBack, w * 0.09, h * 0.21 - Math.abs(legBack) * 0.18);
-    ctx.fillRect(w * 0.34, h * 0.9 + bob + legFront, w * 0.11, h * 0.035);
-    ctx.fillRect(w * 0.48, h * 0.9 + bob + legBack, w * 0.115, h * 0.035);
+    // Legs
+    ctx.fillRect(w * 0.37, h * 0.74 + legSwing, w * 0.08, h * 0.2 - Math.abs(legSwing) * 0.3);
+    ctx.fillRect(w * 0.49, h * 0.74 - legSwing, w * 0.08, h * 0.2 - Math.abs(legSwing) * 0.3);
 
+    // Eye + mouth
     ctx.fillStyle = eye;
-    ctx.fillRect(w * 0.77, h * 0.27 + bob + headLift, w * 0.032, h * 0.04);
-    ctx.fillStyle = '#f4fff6';
-    ctx.fillRect(w * 0.782, h * 0.278 + bob + headLift, w * 0.012, h * 0.014);
+    ctx.fillRect(w * 0.75, h * 0.36 + bob, w * 0.03, h * 0.03);
+    ctx.fillRect(w * 0.87, h * 0.45 + bob, w * 0.02, h * 0.02);
+    ctx.fillRect(w * 0.9, h * 0.45 + bob, w * 0.02, h * 0.02);
 
-    ctx.fillStyle = '#f4e6cb';
-    ctx.fillRect(w * 0.84, h * 0.43 + bob + headLift + h * jawOpen * 0.4, w * 0.015, h * 0.03);
-    ctx.fillRect(w * 0.875, h * 0.435 + bob + headLift + h * jawOpen * 0.35, w * 0.015, h * 0.026);
-
-    if (victory) {
-      ctx.fillStyle = '#fff8d9';
-      ctx.fillRect(w * 0.82, h * 0.23 + bob + headLift, w * 0.014, h * 0.014);
-      ctx.fillRect(w * 0.845, h * 0.225 + bob + headLift, w * 0.014, h * 0.014);
+    if (mood === 'win') {
+      ctx.fillStyle = '#f4ffe9';
+      ctx.fillRect(w * 0.8, h * 0.33 + bob, w * 0.02, h * 0.02);
+      ctx.fillRect(w * 0.83, h * 0.33 + bob, w * 0.02, h * 0.02);
     }
 
     ctx.restore();
@@ -1262,317 +1184,120 @@
     ctx.translate(-baseW * 0.5, -baseH * 0.5);
 
     if (variant === 'bat') {
-      const flap = Math.sin(t * 18);
-      const wingLift = flap * 5;
-      const swoop = Math.cos(t * 9) * 1.4;
-      ctx.fillStyle = '#4a171d';
-      ctx.beginPath();
-      ctx.moveTo(18, 16 + swoop);
-      ctx.lineTo(5, 8 + wingLift + swoop * 0.6);
-      ctx.lineTo(3, 14 + wingLift * 0.4 + swoop * 0.4);
-      ctx.lineTo(9, 24 + wingLift * 0.2 - swoop * 0.3);
-      ctx.lineTo(17, 20 + swoop * 0.4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(18, 16 + swoop);
-      ctx.lineTo(31, 8 + wingLift + swoop * 0.6);
-      ctx.lineTo(33, 14 + wingLift * 0.4 + swoop * 0.4);
-      ctx.lineTo(27, 24 + wingLift * 0.2 - swoop * 0.3);
-      ctx.lineTo(19, 20 + swoop * 0.4);
-      ctx.closePath();
-      ctx.fill();
-
+      const wing = Math.sin(t * 18) * 4.2;
       ctx.fillStyle = tone;
       ctx.beginPath();
-      ctx.ellipse(18, 17 + swoop * 0.45, 7.8, 8.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(18, 17, 8.5, 7.5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(12, 10);
-      ctx.lineTo(15, 4);
-      ctx.lineTo(18, 10);
+      ctx.moveTo(17, 17);
+      ctx.lineTo(4, 10 + wing);
+      ctx.lineTo(8, 20 + wing * 0.5);
+      ctx.lineTo(17, 19);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(18, 10);
-      ctx.lineTo(21, 4);
-      ctx.lineTo(24, 10);
+      ctx.moveTo(19, 17);
+      ctx.lineTo(32, 10 + wing);
+      ctx.lineTo(28, 20 + wing * 0.5);
+      ctx.lineTo(19, 19);
       ctx.closePath();
       ctx.fill();
-
-      ctx.fillStyle = '#ffd8d8';
-      ctx.beginPath();
-      ctx.ellipse(18, 20 + swoop * 0.3, 4.8, 3.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#241012';
-      ctx.fillRect(14, 14, 2, 2.4);
-      ctx.fillRect(20, 14, 2, 2.4);
-      ctx.fillStyle = '#fff1f1';
-      ctx.fillRect(14.8, 14.6, 0.8, 0.8);
-      ctx.fillRect(20.8, 14.6, 0.8, 0.8);
-      ctx.fillStyle = '#ffe8d6';
-      ctx.fillRect(16.5, 21 + swoop * 0.2, 1.2, 2.8);
-      ctx.fillRect(18.8, 21 + swoop * 0.2, 1.2, 2.8);
+      ctx.fillStyle = '#ffd5d5';
+      ctx.fillRect(16, 15, 3, 2);
+      ctx.fillStyle = '#2a1111';
+      ctx.fillRect(14, 14, 2, 2);
+      ctx.fillRect(20, 14, 2, 2);
       ctx.restore();
       return;
     }
 
     if (variant === 'spider') {
       const bob = Math.abs(Math.sin(t * 16)) * 1.4;
-      const pulse = Math.sin(t * 8) * 0.9;
-      ctx.fillStyle = '#5d2329';
-      ctx.beginPath();
-      ctx.ellipse(16, 20 + bob, 7.5, 6.5 + pulse * 0.12, 0, 0, Math.PI * 2);
-      ctx.fill();
       ctx.fillStyle = tone;
       ctx.beginPath();
-      ctx.ellipse(24, 19 + bob, 8.5 + Math.abs(pulse) * 0.18, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(18, 20 + bob, 9.5, 7.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#7e2f37';
       ctx.beginPath();
-      ctx.ellipse(27.5, 18.5 + bob, 4.5, 3.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(24, 19 + bob, 7, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = '#4b191d';
+      ctx.strokeStyle = '#5b2222';
       ctx.lineWidth = 2;
       for (let i = 0; i < 4; i += 1) {
         const ly = 18 + i * 3 + bob;
-        const legSwing = Math.sin(t * 10 + i * 0.8) * 1.2;
         ctx.beginPath();
         ctx.moveTo(14, ly);
-        ctx.lineTo(7 - i * 1.6, ly - 1.5 + legSwing);
+        ctx.lineTo(6 - i * 1.2, ly - 3);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(25, ly);
-        ctx.lineTo(33 + i * 1.6, ly - 1.5 - legSwing);
+        ctx.moveTo(22, ly);
+        ctx.lineTo(30 + i * 1.2, ly - 3);
         ctx.stroke();
       }
 
-      ctx.strokeStyle = '#381114';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(16, 27 + bob);
-      ctx.lineTo(15, 35 + bob);
-      ctx.moveTo(23, 27 + bob);
-      ctx.lineTo(24, 35 + bob);
-      ctx.moveTo(28, 26 + bob);
-      ctx.lineTo(30, 34 + bob);
-      ctx.stroke();
-
       ctx.fillStyle = '#ff4b4b';
-      ctx.fillRect(24, 16 + bob, 2.3, 2.3);
-      ctx.fillRect(28, 16 + bob, 2.3, 2.3);
+      ctx.fillRect(22, 16 + bob, 2.5, 2.5);
+      ctx.fillRect(26, 16 + bob, 2.5, 2.5);
       ctx.restore();
       return;
     }
 
     if (variant === 'night') {
-      const prowl = Math.sin(t * 9.5);
-      const bounceNight = Math.abs(prowl) * 1.1;
-      ctx.fillStyle = '#203247';
-      ctx.beginPath();
-      ctx.moveTo(5, 22 + bounceNight);
-      ctx.lineTo(10, 16 + bounceNight);
-      ctx.lineTo(16, 13 + bounceNight);
-      ctx.lineTo(24, 12 + bounceNight);
-      ctx.lineTo(31, 15 + bounceNight);
-      ctx.lineTo(33, 21 + bounceNight);
-      ctx.lineTo(28, 27 + bounceNight);
-      ctx.lineTo(19, 29 + bounceNight);
-      ctx.lineTo(10, 28 + bounceNight);
-      ctx.closePath();
-      ctx.fill();
-
+      const bounceNight = Math.abs(Math.sin(t * 10)) * 1.0;
       ctx.fillStyle = tone;
       ctx.beginPath();
-      ctx.moveTo(8, 22 + bounceNight);
-      ctx.quadraticCurveTo(11, 14 + bounceNight, 20, 13 + bounceNight);
-      ctx.quadraticCurveTo(28, 13 + bounceNight, 31, 19 + bounceNight);
-      ctx.quadraticCurveTo(30, 26 + bounceNight, 22, 28 + bounceNight);
-      ctx.lineTo(12, 27 + bounceNight);
-      ctx.closePath();
+      ctx.ellipse(18, 20 + bounceNight, 11, 9, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.fillStyle = '#92e8ff';
+      ctx.fillRect(20, 11 + bounceNight, 11, 9);
       ctx.beginPath();
-      ctx.moveTo(18, 15 + bounceNight);
-      ctx.lineTo(24, 10 + bounceNight);
-      ctx.lineTo(28, 16 + bounceNight);
-      ctx.lineTo(23, 20 + bounceNight);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = '#2d3a57';
-      ctx.beginPath();
-      ctx.moveTo(8, 22 + bounceNight);
-      ctx.lineTo(3, 19 + bounceNight);
-      ctx.lineTo(2, 24 + bounceNight);
+      ctx.moveTo(8, 21 + bounceNight);
+      ctx.lineTo(0, 24 + bounceNight);
       ctx.lineTo(8, 26 + bounceNight);
       ctx.closePath();
       ctx.fill();
-
-      ctx.fillRect(12, 28 + bounceNight, 3, 8);
-      ctx.fillRect(22, 28 + bounceNight, 3, 8);
-      ctx.fillRect(15, 34 + bounceNight, 4, 2);
-      ctx.fillRect(24, 34 + bounceNight, 4, 2);
-
+      ctx.fillStyle = '#92e8ff';
+      ctx.beginPath();
+      ctx.ellipse(18, 21 + bounceNight, 5.6, 4.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2d3a57';
+      ctx.fillRect(15, 30, 4, 8);
+      ctx.fillRect(21, 30, 4, 8);
       ctx.shadowColor = '#9ae8ff';
       ctx.shadowBlur = 8;
-      ctx.fillStyle = '#dbffff';
-      ctx.fillRect(23.5, 15 + bounceNight, 2.2, 2.2);
-      ctx.fillRect(27.5, 15.5 + bounceNight, 2, 2);
+      ctx.fillStyle = '#cfffff';
+      ctx.fillRect(26, 15 + bounceNight, 2.4, 2.4);
+      ctx.fillRect(29, 15 + bounceNight, 2.4, 2.4);
       ctx.restore();
       return;
     }
 
     const bounce = Math.abs(Math.sin(t * 11)) * 1.2;
-    const stride = Math.sin(t * 12) * 1.3;
-    ctx.fillStyle = '#61282d';
-    ctx.beginPath();
-    ctx.moveTo(5, 23 + bounce);
-    ctx.lineTo(10, 17 + bounce);
-    ctx.lineTo(17, 14 + bounce);
-    ctx.lineTo(25, 13 + bounce);
-    ctx.lineTo(31, 16 + bounce);
-    ctx.lineTo(33, 21 + bounce);
-    ctx.lineTo(29, 26 + bounce);
-    ctx.lineTo(18, 29 + bounce);
-    ctx.lineTo(9, 28 + bounce);
-    ctx.closePath();
-    ctx.fill();
-
     ctx.fillStyle = tone;
     ctx.beginPath();
-    ctx.moveTo(7, 23 + bounce);
-    ctx.quadraticCurveTo(11, 16 + bounce, 18, 15 + bounce);
-    ctx.quadraticCurveTo(26, 15 + bounce, 30, 20 + bounce);
-    ctx.quadraticCurveTo(29, 26 + bounce, 21, 28 + bounce);
-    ctx.lineTo(11, 27 + bounce);
+    ctx.ellipse(18, 20 + bounce, 11, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillRect(20, 11 + bounce, 11, 9);
+
+    ctx.beginPath();
+    ctx.moveTo(8, 21 + bounce);
+    ctx.lineTo(0, 24 + bounce);
+    ctx.lineTo(8, 26 + bounce);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = '#f2b0b0';
     ctx.beginPath();
-    ctx.moveTo(16, 17 + bounce);
-    ctx.quadraticCurveTo(21, 16 + bounce, 24, 20 + bounce);
-    ctx.quadraticCurveTo(22, 24 + bounce, 16, 24 + bounce);
-    ctx.quadraticCurveTo(13, 21 + bounce, 16, 17 + bounce);
-    ctx.closePath();
+    ctx.ellipse(18, 21 + bounce, 5.6, 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#8f2f2f';
-    ctx.beginPath();
-    ctx.moveTo(26, 16 + bounce);
-    ctx.lineTo(31, 12 + bounce);
-    ctx.lineTo(32, 17 + bounce);
-    ctx.lineTo(28, 19 + bounce);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#5c2024';
-    ctx.fillRect(11, 28 + bounce + stride, 3, 8);
-    ctx.fillRect(21, 28 + bounce - stride, 3, 8);
-    ctx.fillRect(14, 34 + bounce + stride, 4, 2);
-    ctx.fillRect(24, 34 + bounce - stride, 4, 2);
+    ctx.fillRect(15, 30, 4, 8);
+    ctx.fillRect(21, 30, 4, 8);
 
     ctx.fillStyle = '#2a1111';
-    ctx.fillRect(25.5, 17 + bounce, 2.2, 2.2);
-    ctx.fillRect(29, 18 + bounce, 1.5, 1.5);
-    ctx.restore();
-  }
-
-  function drawBossBeast(x, y, w, h, flip, t = 0, hpRatio = 1, telegraph = 0, snap = 0) {
-    const cx = x + w * 0.5;
-    const cy = y + h * 0.5;
-    const bob = Math.sin(t * 5.2) * 2.1;
-    const jaw = Math.sin(t * 6.4) * 1.2 + telegraph * 2.2 + snap * 1.3;
-    const headLift = telegraph * 2.4 + snap * 1.1;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(flip ? -1 : 1, 1);
-    ctx.scale(w / 96, h / 78);
-    ctx.translate(-48, -39);
-
-    ctx.fillStyle = '#4d171b';
-    ctx.beginPath();
-    ctx.moveTo(8, 48 + bob);
-    ctx.quadraticCurveTo(14, 20 + bob, 35, 15 + bob);
-    ctx.quadraticCurveTo(66, 9 + bob, 86, 24 + bob);
-    ctx.quadraticCurveTo(92, 34 + bob, 88, 49 + bob);
-    ctx.quadraticCurveTo(77, 62 + bob, 57, 66 + bob);
-    ctx.quadraticCurveTo(30, 69 + bob, 12, 60 + bob);
-    ctx.closePath();
-    ctx.fill();
-
-    if (telegraph > 0) {
-      ctx.fillStyle = `rgba(255, 194, 132, ${0.16 + telegraph * 0.24})`;
-      ctx.beginPath();
-      ctx.ellipse(56, 33 + bob, 28 + telegraph * 8, 14 + telegraph * 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = '#98282f';
-    ctx.beginPath();
-    ctx.moveTo(40, 20 + bob - headLift);
-    ctx.quadraticCurveTo(55, 6 + bob - headLift, 74, 10 + bob - headLift * 0.8);
-    ctx.quadraticCurveTo(87, 14 + bob - headLift * 0.5, 89, 27 + bob - headLift * 0.2);
-    ctx.quadraticCurveTo(81, 37 + bob - headLift * 0.1, 64, 38 + bob);
-    ctx.lineTo(46, 36 + bob - headLift * 0.12);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#d35252';
-    ctx.beginPath();
-    ctx.moveTo(51, 37 + bob - headLift * 0.1);
-    ctx.lineTo(72, 35 + bob - headLift * 0.06);
-    ctx.lineTo(87, 40 + bob + jaw);
-    ctx.lineTo(69, 50 + bob + jaw);
-    ctx.lineTo(52, 48 + bob + jaw * 0.7);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#f7d3c6';
-    ctx.fillRect(55, 38 + bob + jaw * 0.5, 3, 10);
-    ctx.fillRect(62, 37 + bob + jaw * 0.4, 3, 11);
-    ctx.fillRect(69, 36 + bob + jaw * 0.3, 3, 10);
-
-    ctx.fillStyle = '#2a0f12';
-    ctx.beginPath();
-    ctx.moveTo(32, 18 + bob);
-    ctx.lineTo(37, 5 + bob);
-    ctx.lineTo(44, 18 + bob);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(56, 14 + bob);
-    ctx.lineTo(62, 2 + bob);
-    ctx.lineTo(69, 15 + bob);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#5d1b20';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(28, 58 + bob);
-    ctx.lineTo(24, 74 + bob);
-    ctx.moveTo(46, 59 + bob);
-    ctx.lineTo(45, 75 + bob);
-    ctx.moveTo(63, 56 + bob);
-    ctx.lineTo(68, 74 + bob);
-    ctx.stroke();
-
-    ctx.fillStyle = '#18090b';
-    ctx.fillRect(63, 19 + bob - headLift * 0.38, 4, 4);
-    ctx.fillRect(72, 20 + bob - headLift * 0.38, 4, 4);
-    ctx.fillStyle = `rgba(255, 245, 241, ${0.9})`;
-    ctx.fillRect(64.2, 20.1 + bob - headLift * 0.38, 1.1, 1.1);
-    ctx.fillRect(73.2, 21.1 + bob - headLift * 0.38, 1.1, 1.1);
-
-    ctx.fillStyle = `rgba(255, 112, 112, ${0.14 + (1 - hpRatio) * 0.22})`;
-    ctx.beginPath();
-    ctx.ellipse(50, 41 + bob, 34, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(27, 15 + bounce, 2, 2);
     ctx.restore();
   }
 
@@ -1738,7 +1463,6 @@
     if (!POLISH) return;
     if (player.landingSquashTimer > 0) player.landingSquashTimer = Math.max(0, player.landingSquashTimer - dt);
     if (state.shakeTimer > 0) state.shakeTimer = Math.max(0, state.shakeTimer - dt);
-    if (state.bossDefeatFlashTimer > 0) state.bossDefeatFlashTimer = Math.max(0, state.bossDefeatFlashTimer - dt);
 
     for (let i = dustParticles.length - 1; i >= 0; i -= 1) {
       const p = dustParticles[i];
@@ -2050,11 +1774,6 @@
     unlockAchievement('boss_slayer');
     home.active = true;
     state.score += SCORE_VALUES.bossDefeat;
-    state.bossDefeatFlashTimer = 0.65;
-    state.shakeTimer = 0.22;
-    state.shakeAmp = 2.3;
-    spawnSparkles(boss.x + boss.w * 0.5, boss.y + boss.h * 0.4, [255, 222, 154], 18);
-    spawnSparkles(boss.x + boss.w * 0.5, boss.y + boss.h * 0.4, [255, 136, 136], 14);
     setMode('running', 'Boss etkisiz! Eve kadar devam et.');
     state.stageBannerTimer = 1.5;
     state.stageBannerText = 'BOSS YENILDI';
@@ -2395,28 +2114,17 @@
     boss.dir = dx >= 0 ? 1 : -1;
     boss.y = GROUND_Y - boss.h + Math.sin(boss.bobPhase) * 6;
 
-    boss.telegraphTimer = Math.max(0, boss.telegraphTimer - dt);
-    boss.snapTimer = Math.max(0, boss.snapTimer - dt);
     boss.shootTimer -= dt;
-    if (boss.shootTimer <= 0.28 && boss.telegraphTimer <= 0) {
-      boss.telegraphTimer = 0.28;
-      spawnSparkles(boss.x + boss.w * 0.7, boss.y + boss.h * 0.34, [255, 214, 156], 4);
-      playBeep(560, 35);
-    }
     if (boss.shootTimer <= 0) {
-      const muzzleX = boss.x + boss.w * (boss.dir < 0 ? 0.28 : 0.72);
-      const muzzleY = boss.y + boss.h * 0.4;
-      const angle = Math.atan2(player.y + player.h * 0.45 - muzzleY, player.x + player.w * 0.5 - muzzleX);
+      const angle = Math.atan2(player.y + player.h * 0.45 - (boss.y + 26), player.x - boss.x);
       bossShots.push({
-        x: muzzleX,
-        y: muzzleY,
+        x: boss.x + boss.w * 0.25,
+        y: boss.y + 26,
         vx: Math.cos(angle) * 260,
         vy: Math.sin(angle) * 260,
         life: 2.2
       });
-      boss.snapTimer = 0.18;
       boss.shootTimer = (1.1 + Math.random() * 0.6) / state.bossShootRate;
-      spawnSparkles(muzzleX, muzzleY, [255, 165, 135], 5);
       playBeep(460, 55);
     }
 
@@ -2651,23 +2359,6 @@
         ctx.closePath();
         ctx.fill();
       }
-
-      const aurora = ctx.createLinearGradient(0, 44, canvas.width, 170);
-      aurora.addColorStop(0, 'rgba(94, 206, 255, 0)');
-      aurora.addColorStop(0.32, 'rgba(94, 206, 255, 0.12)');
-      aurora.addColorStop(0.58, 'rgba(124, 255, 194, 0.16)');
-      aurora.addColorStop(1, 'rgba(124, 255, 194, 0)');
-      ctx.fillStyle = aurora;
-      ctx.beginPath();
-      ctx.moveTo(0, 86 + Math.sin(state.animTime * 0.7) * 10);
-      for (let x = 0; x <= canvas.width; x += 44) {
-        const wave = 86 + Math.sin(state.animTime * 0.8 + x * 0.016) * 12;
-        ctx.lineTo(x, wave);
-      }
-      ctx.lineTo(canvas.width, 168);
-      ctx.lineTo(0, 168);
-      ctx.closePath();
-      ctx.fill();
     } else {
       const sunX = canvas.width - 118;
       const sunY = 92;
@@ -2746,26 +2437,6 @@
       mist.addColorStop(1, 'rgba(192, 168, 182, 0)');
       ctx.fillStyle = mist;
       ctx.fillRect(0, mistY, canvas.width, 120);
-
-      for (let i = 0; i < 4; i += 1) {
-        const cx = 120 + i * 210 - (state.cameraX * 0.1 % 210);
-        const cy = 150 + (i % 2) * 38;
-        const glow = 0.2 + Math.sin(state.animTime * 2 + i) * 0.05;
-        ctx.fillStyle = `rgba(132, 233, 255, ${glow})`;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + 16, cy + 8);
-        ctx.lineTo(cx + 8, cy + 28);
-        ctx.lineTo(cx - 6, cy + 12);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      const vignette = ctx.createRadialGradient(canvas.width * 0.5, canvas.height * 0.48, 120, canvas.width * 0.5, canvas.height * 0.48, canvas.width * 0.72);
-      vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      vignette.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
 
@@ -2972,10 +2643,9 @@
       if (x + e.w < -20 || x > canvas.width + 20) continue;
       const drawW = e.w;
       const drawH = e.h;
-      const drawY = e.type === 'spider' ? e.y + 6 : e.y;
       const shadowAlpha = e.type === 'bat' ? 0.12 : 0.22;
-      drawShadow(x, drawY + e.h - 1, drawW, 22, shadowAlpha);
-      drawIconEnemy(x, drawY, drawW, drawH, e.vx < 0, t + e.x * 0.01, e.type, e.tone || '#d65757');
+      drawShadow(x, e.y + e.h - 1, drawW, 22, shadowAlpha);
+      drawIconEnemy(x, e.y, drawW, drawH, e.vx < 0, t + e.x * 0.01, e.type, e.tone || '#d65757');
     }
 
     for (const s of playerShots) {
@@ -2990,11 +2660,6 @@
 
     for (const s of bossShots) {
       const sx = s.x - cam;
-      const glow = ctx.createRadialGradient(sx, s.y, 1, sx, s.y, 16);
-      glow.addColorStop(0, 'rgba(255, 230, 210, 0.7)');
-      glow.addColorStop(1, 'rgba(255, 116, 116, 0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(sx - 16, s.y - 16, 32, 32);
       ctx.fillStyle = '#ff7474';
       ctx.beginPath();
       ctx.arc(sx, s.y, 5.5, 0, Math.PI * 2);
@@ -3006,17 +2671,8 @@
     if (boss.active || boss.hp > 0) {
       const bx = boss.x - cam;
       const by = boss.y;
-      const bossTelegraph = clamp(boss.telegraphTimer / 0.28, 0, 1);
-      const bossSnap = clamp(boss.snapTimer / 0.18, 0, 1);
       drawShadow(bx + 8, by + boss.h - 4, boss.w * 0.7, 22, 0.22);
-      if (bossTelegraph > 0) {
-        const warn = ctx.createRadialGradient(bx + boss.w * 0.64, by + boss.h * 0.34, 4, bx + boss.w * 0.64, by + boss.h * 0.34, boss.w * 0.8);
-        warn.addColorStop(0, `rgba(255, 198, 120, ${0.14 + bossTelegraph * 0.22})`);
-        warn.addColorStop(1, 'rgba(255, 198, 120, 0)');
-        ctx.fillStyle = warn;
-        ctx.fillRect(bx - 18, by - 14, boss.w + 36, boss.h + 28);
-      }
-      drawBossBeast(bx + 2, by + 2, boss.w - 4, boss.h - 6, boss.dir < 0, t * 0.8, boss.hp / Math.max(1, boss.maxHp), bossTelegraph, bossSnap);
+      drawIconEnemy(bx + 10, by + 10, boss.w - 20, boss.h - 20, boss.dir < 0, t * 0.8, 'bat', '#a82b2b');
       ctx.fillStyle = '#8f2b2b';
       ctx.fillRect(bx + 16, by + 8, boss.w - 32, 10);
       const hpW = ((boss.w - 36) * Math.max(0, boss.hp)) / Math.max(1, boss.maxHp);
@@ -3036,13 +2692,6 @@
       grad.addColorStop(1, 'rgba(120, 185, 255, 0.64)');
       ctx.fillStyle = grad;
       ctx.fillRect(px - beamW * 0.5, beamTop, beamW, portal.y + portal.h - beamTop);
-
-      const halo = ctx.createRadialGradient(px, portal.y + portal.h - 8, 8, px, portal.y + portal.h - 8, 64 + pulse * 18);
-      halo.addColorStop(0, 'rgba(213, 245, 255, 0.34)');
-      halo.addColorStop(0.6, 'rgba(150, 221, 255, 0.12)');
-      halo.addColorStop(1, 'rgba(150, 221, 255, 0)');
-      ctx.fillStyle = halo;
-      ctx.fillRect(px - 90, portal.y + portal.h - 96, 180, 160);
 
       ctx.strokeStyle = 'rgba(185, 236, 255, 0.7)';
       ctx.lineWidth = 2;
@@ -3137,7 +2786,7 @@
     const cy = drawY + drawH * 0.5;
     if (ICON_DINO) {
       const mood = playerState === 'hurt' ? 'hurt' : playerState === 'win' ? 'win' : 'normal';
-      drawIconDino(drawX, drawY, drawW, drawH, flip < 0, scaleX, scaleY, mood, playerState, player.powerTimer > 0);
+      drawIconDino(drawX, drawY, drawW, drawH, flip < 0, scaleX, scaleY, mood);
       return;
     }
     if (spriteSheets.ready) {
@@ -3411,27 +3060,6 @@
     ctx.restore();
   }
 
-  function drawBossDefeatFlourish() {
-    if (state.bossDefeatFlashTimer <= 0) return;
-    const k = state.bossDefeatFlashTimer / 0.65;
-    ctx.save();
-    const burst = ctx.createRadialGradient(canvas.width * 0.5, canvas.height * 0.42, 20, canvas.width * 0.5, canvas.height * 0.42, canvas.width * 0.5);
-    burst.addColorStop(0, `rgba(255, 242, 186, ${0.2 * k})`);
-    burst.addColorStop(0.45, `rgba(255, 170, 120, ${0.12 * k})`);
-    burst.addColorStop(1, 'rgba(255, 120, 120, 0)');
-    ctx.fillStyle = burst;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = `rgba(255, 248, 220, ${0.16 * k})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = `rgba(255, 240, 194, ${0.9 * k})`;
-    ctx.font = 'bold 28px Candara, Trebuchet MS, sans-serif';
-    ctx.fillText('BOSS YENILDI', canvas.width * 0.5, canvas.height * 0.32);
-    ctx.restore();
-  }
-
   function drawAchievementToasts() {
     if (!state.achievementToasts || state.achievementToasts.length === 0) return;
     const maxShow = Math.min(3, state.achievementToasts.length);
@@ -3505,7 +3133,6 @@
     drawStageBanner();
     drawTransitionOverlay();
     drawBossDefeatedHint();
-    drawBossDefeatFlourish();
     drawWinBanner();
     drawHomeScene();
     drawTeleportWipe();
@@ -3514,62 +3141,7 @@
     drawAssetDebugOverlay();
   }
 
-  function renderGameToText() {
-    const payload = {
-      coordinateSystem: 'origin top-left, +x right, +y down',
-      mode: state.mode,
-      level: state.level,
-      score: state.score,
-      coins: state.coins,
-      lives: state.lives,
-      time: Math.round(state.time),
-      combo: state.comboCount,
-      player: {
-        x: Math.round(player.x),
-        y: Math.round(player.y),
-        vx: Math.round(player.vx),
-        vy: Math.round(player.vy),
-        onGround: player.onGround,
-        face: player.face,
-        powerTimer: Number(player.powerTimer.toFixed(2)),
-        hurtTimer: Number(player.hurtTimer.toFixed(2))
-      },
-      boss: {
-        active: boss.active,
-        hp: boss.hp,
-        maxHp: boss.maxHp,
-        x: Math.round(boss.x),
-        y: Math.round(boss.y)
-      },
-      portal: {
-        active: portal.active,
-        x: Math.round(portal.x),
-        y: Math.round(portal.y)
-      },
-      enemies: enemies.filter(e => !e.dead).slice(0, 12).map(e => ({
-        type: e.type,
-        x: Math.round(e.x),
-        y: Math.round(e.y),
-        w: e.w,
-        h: e.h
-      }))
-    };
-    return JSON.stringify(payload);
-  }
-
-  window.render_game_to_text = renderGameToText;
-  window.advanceTime = ms => {
-    state.manualTimeMode = true;
-    const dt = 1 / 60;
-    const steps = Math.max(1, Math.round(ms / (1000 / 60)));
-    for (let i = 0; i < steps; i += 1) {
-      state.animTime += dt;
-      update(dt);
-    }
-    render();
-  };
   function loop(ts) {
-    if (state.manualTimeMode) return;
     if (!state.lastTs) state.lastTs = ts;
     const dt = Math.min(0.05, (ts - state.lastTs) / 1000);
     state.lastTs = ts;
@@ -3646,6 +3218,9 @@
 
     for (const [id, key] of touchMap) {
       const el = document.getElementById(id);
+      el.addEventListener('contextmenu', e => e.preventDefault());
+      el.addEventListener('selectstart', e => e.preventDefault());
+      el.addEventListener('dragstart', e => e.preventDefault());
       el.addEventListener('pointerdown', e => {
         e.preventDefault();
         input[key] = true;
@@ -3662,6 +3237,9 @@
     }
 
     const jumpBtn = document.getElementById('jumpBtn');
+    jumpBtn.addEventListener('contextmenu', e => e.preventDefault());
+    jumpBtn.addEventListener('selectstart', e => e.preventDefault());
+    jumpBtn.addEventListener('dragstart', e => e.preventDefault());
     jumpBtn.addEventListener('pointerdown', e => {
       e.preventDefault();
       input.jumpPressed = true;
@@ -3680,6 +3258,9 @@
 
     const fireBtn = document.getElementById('fireBtn');
     if (fireBtn) {
+      fireBtn.addEventListener('contextmenu', e => e.preventDefault());
+      fireBtn.addEventListener('selectstart', e => e.preventDefault());
+      fireBtn.addEventListener('dragstart', e => e.preventDefault());
       fireBtn.addEventListener('pointerdown', e => {
         e.preventDefault();
         input.shootPressed = true;
@@ -3749,26 +3330,7 @@
   renderAchievementList();
   showAchievementHint('');
   fullReset(true);
-  if (startupWin) {
-    state.score = Math.max(state.score, 1280);
-    state.bestScore = Math.max(state.bestScore, state.score);
-    state.coins = 42;
-    state.comboMult = 5;
-    state.level = 3;
-    state.bossDefeated = true;
-    boss.active = false;
-    boss.hp = 0;
-    setMode('won', 'TEBRIKLER KAZANDINIZ!');
-  }
-  if (startupPlay) {
-    startFromLevel(1);
-  }
-  if (startupLevel > 1) {
-    startFromLevel(startupLevel);
-  }
   updateUiVisibility();
   render();
   requestAnimationFrame(loop);
 })();
-
-
